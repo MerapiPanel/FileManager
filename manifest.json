@@ -1,6 +1,10 @@
 {
   "name": "File Manager",
   "description": "File Manager module",
+  "github": {
+    "user": "MerapiPanel",
+    "repo": "FileManager"
+  },
   "version": "0.1.0",
   "author": "Il4mb",
   "icon": "./icon.svg"
