@@ -1,0 +1,7 @@
+{
+  "name": "File Manager",
+  "description": "File Manager module",
+  "version": "0.1.0",
+  "author": "Il4mb",
+  "icon": "./icon.svg"
+}
