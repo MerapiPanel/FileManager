@@ -3,6 +3,7 @@
 namespace MerapiPanel\Module\FileManager;
 
 use MerapiPanel\Box\Module\__Fragment;
+use MerapiPanel\Box\Module\Entity\Module;
 use Symfony\Component\Filesystem\Path;
 
 
@@ -11,10 +12,10 @@ class Service extends __Fragment
     protected string $root;
     protected $module;
 
-    function onCreate(\MerapiPanel\Box\Module\Entity\Module $module)
+    function onCreate(Module $module)
     {
         $this->module = $module;
-        $this->module->props->root = Path::join($_ENV['__MP_CWD__'], 'content');
+        $this->root = Path::join($_ENV['__MP_CWD__'], 'content');
     }
 
 
