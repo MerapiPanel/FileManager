@@ -46,6 +46,7 @@ class Admin extends __Fragment
                 newFolder: "{{ '/api/FileManager/newFolder' | access_path }}",
             }
             __.FileManager.roles = $roles;
+            __.FileManager.csrf_token = "{{csrf_token()}}";
         </script>
         HTML;
         $panel->Scripts->add("filemanager-opts", $script);

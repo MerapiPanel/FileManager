@@ -2,7 +2,6 @@ import { __MP } from "../../../../Buildin/src/main";
 import HugeUploader from 'huge-uploader';
 import { ModalTypeInterface } from "@il4mb/merapipanel/modal";
 
-
 const __: __MP = (window as any).__;
 const FileManager = __.FileManager;
 
@@ -47,12 +46,13 @@ FileManager.roles = {
 
 FileManager.uploadInfo = function (id: string) {
     return new Promise((resolve, reject) => {
-        __.http.post(FileManager.endpoints.uploadInfo, { id: id }).then(res => {
+        __.http.post(FileManager.endpoints.uploadInfo, { id: id, csrf_token: FileManager.csrf_token }).then(res => {
             resolve(res.data)
         })
             .catch(reject)
     })
 }
+
 // upload handler
 FileManager.uploadHandler = function (files: File[], appendTo: JQuery<HTMLElement>) {
 
@@ -356,7 +356,7 @@ FileManager.delete = function (asset: Asset) {
             if (!deleteURL) {
                 __.toast("Error: Please set FileManager.endpoints.delete", 5, 'text-danger');
             }
-            __.http.post(deleteURL, { path: asset.path })
+            __.http.post(deleteURL, { path: asset.path, csrf_token: FileManager.csrf_token })
                 .then(res => {
                     __.toast("File deleted successfully", 5, 'text-success');
                     FileManager.fire("delete", asset);
@@ -387,7 +387,7 @@ FileManager.rename = function (asset: Asset) {
                 if (!renameURL) {
                     __.toast("Error: Please set FileManager.endpoints.rename", 5, 'text-danger');
                 }
-                __.http.post(renameURL, { path: asset.path, name: name })
+                __.http.post(renameURL, { path: asset.path, name: name, csrf_token: FileManager.csrf_token })
                     .then(res => {
                         __.toast("File renamed successfully", 5, 'text-success');
                         FileManager.fire("rename", asset, name);
@@ -419,7 +419,7 @@ FileManager.newFolder = function (asset: Asset) {
                 if (!newFolderURL) {
                     __.toast("Error: Please set FileManager.endpoints.newFolder", 5, 'text-danger');
                 }
-                __.http.post(newFolderURL, { path: asset.path, name: name })
+                __.http.post(newFolderURL, { path: asset.path, name: name, csrf_token: FileManager.csrf_token })
                     .then(res => {
                         __.toast("Folder created successfully", 5, 'text-success');
                         FileManager.fire("newFolder", asset, name);
@@ -961,6 +961,7 @@ FileManager.on("property:Modal", (e, Modal: any) => {
                     formData.append(`extensions[${key}]`, FileManager.config.extensions[key]);
                 })
             }
+            formData.append("csrf_token", FileManager.csrf_token);
             __.http.post(fetchURL, formData).then(result => {
                 const assets: any[] = (result.data || []) as any;
                 storeAsset(assets);
@@ -1163,19 +1164,19 @@ FileManager.on("property:AssetView", (e: Event, AssetView: any) => {
             }
         }
 
+        const content = $(`<div class="ratio ratio-16x9 asset-view mb-3" style="max-height: 65vh; height: 100%;overflow: hidden;"></div><small class="text-muted text-semibold text-break" id="assetpath-label">${asset.path}</small>`)
+        const modal   = $("#FileManagerModal_AssetView").length > 0 ? __.modal.from($("#FileManagerModal_AssetView")) : __.modal.create("FileManagerModal_AssetView", content);
 
-        const content = $(`<div class="ratio ratio-16x9 asset-view" style="max-height: 65vh; height: 100%;overflow: hidden;"></div><small class="text-muted text-semibold text-break">${asset.path}</small>`)
-
-        const modal = $("#FileManagerModal_AssetView").length > 0 ? __.modal.from($("#FileManagerModal_AssetView")) : __.modal.create("FileManagerModal_AssetView", content);
         modal.el.prop("id", "FileManagerModal_AssetView");
-        modal.el.find(".modal-footer").empty();
+        modal.show();
+
         modal.el.find(".modal-title").text(asset.name);
         modal.el.find(".modal-dialog").css({
             maxWidth: "1024px",
-        })
+        });
         modal.el.find(".modal-body").css({
             maxWidth: "1024px",
-        })
+        });
 
         modal.el.find(".asset-view").empty().append(
             $("<div class='w-100 h-100 d-flex justify-content-center align-items-center'>")
@@ -1183,19 +1184,21 @@ FileManager.on("property:AssetView", (e: Event, AssetView: any) => {
                     $("<i class='fa-solid fa-spinner fa-pulse fa-lg'></i>"),
                     $("<span class='ms-2'>Loading...</span>")
                 )
-        )
-        modal.show();
+        );
 
-        $(modal.el).find(".modal-footer").empty().addClass("p-3").append(
-            FileManager.is_pick
-                ? $(`<button type="button" class="btn btn-primary ms-2">Select</button>`)
+        modal.find("#assetpath-label").text(window.location.origin + "/" + asset.path.replace(/^\//, ''));
+
+        if (FileManager.is_pick) {
+            $(modal.el).find(".modal-footer").empty().addClass("p-3").append(
+                $(`<button type="button" class="btn btn-primary ms-2">Select</button>`)
                     .on("click", () => {
                         FileManager.fire("asset:select", asset);
                         modal.el.remove();
                     })
-                : ""
-
-        )
+            )
+        } else {
+            $(modal.el).find(".modal-footer").remove();
+        }
         if (callback[asset.type]) {
             callback[asset.type](modal);
         } else {
