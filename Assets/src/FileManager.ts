@@ -106,7 +106,7 @@ FileManager.uploadHandler = function (files: File[], appendTo: JQuery<HTMLElemen
                 "uploader-file-folder": (file as any).folder,
                 "uploader-file-size": files[i].size
             },
-            chunkSize: 2
+            chunkSize: 1
         });
 
         const $btn = component.find(".btn");
@@ -216,7 +216,8 @@ FileManager.on("upload:finish", (files: File[]) => {
 FileManager.upload_files = [];
 
 // show upload manager
-FileManager.upload = function (files: File[] = []) {
+FileManager.upload = function (_files: File[] = []) {
+
     if (!FileManager.roles.upload) {
         __.toast("You don't have permission to upload files", 5, 'text-danger');
         return;
@@ -228,6 +229,18 @@ FileManager.upload = function (files: File[] = []) {
     if (!folder && FileManager.config.enable_select_folder) {
         folder = "/";
     }
+
+    const files: File[] = [];
+    for (let i = 0; i < _files.length; i++) {
+        let file = _files[i];
+        if ((FileManager.config.extensions || []).includes(file.name.toLocaleLowerCase().replace(/^.*\./, '')) || (FileManager.config.extensions || []).includes(file.type)) {
+            files.push(file);
+        } else {
+            __.toast(`Not allowed extension ${file.name}, upload skipped.`, 5, 'text-warning');
+        }
+    }
+
+    if (!files.length) return;
 
     const $content = $("<div>")
         .css({
@@ -261,7 +274,6 @@ FileManager.upload = function (files: File[] = []) {
                         })
                         .on("drop", (e) => {
                             e.preventDefault();
-                            console.log(e);
                         })
                         .css({
                             margin: "auto 0px",
@@ -367,7 +379,6 @@ FileManager.delete = function (asset: Asset) {
                 })
         })
 }
-
 
 
 FileManager.rename = function (asset: Asset) {
@@ -620,7 +631,7 @@ FileManager.on("property:Modal", (e, Modal: any) => {
     }
 
     function assetId(asset: Asset) {
-        return ("asset-" + asset.path.replace(/[^a-zA-Z0-9]/g, "-")).replace(/-+/g, "-");
+        return ("asset-" + asset.path.replace(/[^a-zA-Z0-9]/g, "-")).replace(/-+/g, "-").replace(/^\-/, '').replace(/\-$/g, '');
     }
 
     function uploadFinishHandler(e: Event, fileInfo: any) {
@@ -661,7 +672,7 @@ FileManager.on("property:Modal", (e, Modal: any) => {
 
         const config = FileManager.config;
         if (config.enable_context_menu == false) return false;
-        if (!config.enable_view && !config.enable_rename && !config.enable_new_folder && !config.enable_download && !config.enable_delete) return false;
+        if (!config.enable_view && !config.enable_rename && !config.enable_create_folder && !config.enable_download && !config.enable_delete) return false;
 
         function adjustContentPosition(content: HTMLElement) {
             var rect = content.getBoundingClientRect();
@@ -719,7 +730,7 @@ FileManager.on("property:Modal", (e, Modal: any) => {
                         hideContextMenu();
                         FileManager.rename(asset);
                     }) : "",
-                asset.type == "folder" && config.enable_new_folder ? $(`<li class="list-group-item"><i class="fa-solid fa-folder-plus"></i> Folder</li>`)
+                asset.type == "folder" && config.enable_create_folder ? $(`<li class="list-group-item"><i class="fa-solid fa-folder-plus"></i> Folder</li>`)
                     .on("mouseenter", function () {
                         $(this).addClass("bg-primary text-white");
                     })
@@ -755,6 +766,7 @@ FileManager.on("property:Modal", (e, Modal: any) => {
                         FileManager.delete(asset);
                     }) : ""
             )
+
         content.css({ position: 'absolute', zIndex: 600, left: (e as any).pageX - 200, top: (e as any).pageY, boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.1)', cursor: 'pointer', width: "100%", maxWidth: "200px" }).appendTo("body");
         adjustContentPosition(content[0]);
         $(document).on("click", clickOutsideHandler);
@@ -769,10 +781,8 @@ FileManager.on("property:Modal", (e, Modal: any) => {
     }
 
     function deleteHandler(e: Event, asset: Asset) {
-
-        if (deleteAsset(asset)) {
-            $(`#${assetId(asset)}`).remove();
-        }
+        deleteAsset(asset);
+        $(`#${assetId(asset)}`).remove();
     }
 
 
@@ -837,24 +847,13 @@ FileManager.on("property:Modal", (e, Modal: any) => {
 
                             $("<div class='text-center'>")
                                 .on("click", () => {
-                                    const input = $(`<input type="file" multiple>`).on('input', (e) => { if (!e.target || !(e.target as any).files) return; FileManager.upload((e.target as any).files); });
-                                    if (FileManager.config.extensions) {
-                                        let extensions: string[] = [];
-                                        Object.values(FileManager.config.extensions).forEach(ext => {
-                                            if (typeof ext === 'string' || ext instanceof String) {
-                                                if (ext.startsWith(".")) {
-                                                    ext.replace(/^./, "");
-                                                }
-                                                extensions.push(ext as string);
-                                            }
-                                        });
-                                        input.attr("accept", extensions.join(", "));
-                                    }
+                                    const input = $(`<input type="file" accept="${(FileManager.config.extensions || []).map(e => `.${e}`).join(',')}" multiple>`)
+                                        .on('input', (e) => { if (!e.target || !(e.target as any).files) return; FileManager.upload((e.target as any).files); });
+
                                     input.trigger("click");
                                 })
                                 .on("drop", (e) => {
                                     e.preventDefault();
-                                    console.log(e);
                                 })
                                 .css({
                                     margin: "auto 0px",
@@ -1053,7 +1052,6 @@ FileManager.on("property:Modal", (e, Modal: any) => {
     }
 
     FileManager.on("newFolder:/", (e: Event, asset: Asset, name) => {
-        console.log(asset, name)
         const newAsset = {
             name: name,
             path: asset.path.replace(/\/$/, "") + "/" + name + "/",
@@ -1165,7 +1163,7 @@ FileManager.on("property:AssetView", (e: Event, AssetView: any) => {
         }
 
         const content = $(`<div class="ratio ratio-16x9 asset-view mb-3" style="max-height: 65vh; height: 100%;overflow: hidden;"></div><small class="text-muted text-semibold text-break" id="assetpath-label">${asset.path}</small>`)
-        const modal   = $("#FileManagerModal_AssetView").length > 0 ? __.modal.from($("#FileManagerModal_AssetView")) : __.modal.create("FileManagerModal_AssetView", content);
+        const modal = $("#FileManagerModal_AssetView").length > 0 ? __.modal.from($("#FileManagerModal_AssetView")) : __.modal.create("FileManagerModal_AssetView", content);
 
         modal.el.prop("id", "FileManagerModal_AssetView");
         modal.show();
@@ -1214,16 +1212,28 @@ FileManager.on("property:AssetView", (e: Event, AssetView: any) => {
 
 FileManager.is_pick = false;
 
-FileManager.select = function () {
+FileManager.select = function (extensions = null) {
+    let oldExtConfig = FileManager.config.extensions;
+    if (extensions && Array.isArray(extensions)) {
+        FileManager.config.extensions = extensions;
+    }
     FileManager.is_pick = true;
     return new Promise((resolve, reject) => {
         function pickFileHandler(e: Event, asset: Asset) {
+            if (!((FileManager.config.extensions || []) as any[]).includes(asset.path.toLocaleLowerCase().replace(/^.*\./g, ''))) {
+                FileManager.is_pick = false;
+                FileManager.config.extensions = oldExtConfig;
+                __.toast(`Please select only one of ${(FileManager.config.extensions || []).join(', ')} extension`, 5, 'text-danger');
+                reject("Not valid file extension");
+            }
             FileManager.is_pick = false;
+            FileManager.config.extensions = oldExtConfig;
             resolve(asset);
         }
         FileManager.off("asset:select", pickFileHandler);
         FileManager.on("asset:select", pickFileHandler);
         FileManager.Modal.show();
-
-    })
+    }).finally(() => {
+        FileManager.config.extensions = oldExtConfig;
+    });
 }

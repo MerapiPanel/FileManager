@@ -1,4 +1,5 @@
 <?php
+
 namespace MerapiPanel\Module\FileManager;
 
 use MerapiPanel\Box\Module\__Fragment;
@@ -164,7 +165,6 @@ class Ajax extends __Fragment
                 ];
                 $stack[] = $file;
             }
-
         }
 
 
@@ -228,7 +228,6 @@ class Ajax extends __Fragment
                                 ? "video"
                                 : "file"),
                     ];
-
                 }
             }
             closedir($dh); // Close the directory handle
@@ -243,7 +242,6 @@ class Ajax extends __Fragment
         $absolute_path = strtolower(str_replace('\\', '/', $absolute_path));
 
         return str_replace($server_root, '', $absolute_path);
-
     }
 
 
@@ -309,7 +307,6 @@ class Ajax extends __Fragment
             }
 
             return $uploaded;
-
         } catch (Throwable $e) {
             throw $e;
         }
@@ -344,7 +341,6 @@ class Ajax extends __Fragment
 
     function uploadChunk()
     {
-
         if (!$this->module->getRoles()->isAllowed(0)) {
             throw new \Exception('Permission denied');
         }
@@ -448,7 +444,6 @@ class Ajax extends __Fragment
 
             file_put_contents(Path::join(__DIR__, "uploads", $uploader_file_id), json_encode($information));
             return true;
-
         } else {
 
             file_put_contents(Path::join(__DIR__, "uploads", $uploader_file_id), json_encode($information));
