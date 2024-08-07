@@ -5,7 +5,7 @@ namespace MerapiPanel\Module\FileManager;
 use MerapiPanel\Box\Module\__Fragment;
 use MerapiPanel\Box\Module\Entity\Module;
 use Symfony\Component\Filesystem\Path;
-
+use Throwable;
 
 class Service extends __Fragment
 {
@@ -15,7 +15,14 @@ class Service extends __Fragment
     function onCreate(Module $module)
     {
         $this->module = $module;
-        $this->root = Path::join($_ENV['__MP_CWD__'], 'content');
+        $this->root   = Path::join($_ENV['__MP_CWD__'], 'content');
+        try {
+            if (!file_exists($this->root)) mkdir($this->root, 0777, true);
+            $upload = Path::join($this->root, "upload");
+            if (!file_exists($upload)) mkdir($upload, 0777, true);
+        } catch (Throwable $t) {
+            error_log("", $t->getMessage());
+        }
     }
 
 
@@ -83,7 +90,7 @@ class Service extends __Fragment
 
         return $stack;
     }
-    
+
 
     function absoluteToRelativePath($absolute_path)
     {
@@ -113,5 +120,4 @@ class Service extends __Fragment
         }
         return false; // Directory is empty
     }
-
 }
